@@ -1,6 +1,5 @@
-from math import sqrt
 from matplotlib.axes import Axes
-from typing import Optional, Iterable
+from typing import Optional
 import json
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -29,7 +28,7 @@ def vigenere_cipher(
     return bytes(cipher_text_bytes)
 
 
-def letter_distribuition(text: bytes | str) -> dict[int, int]:
+def byte_distribuition(text: bytes | str) -> dict[int, int]:
     text_data = (text.encode("utf-8") if isinstance(text, str) else text)
     frequency_dict: dict = {i: 0 for i in range(256)}
     for byte in text_data:
@@ -63,16 +62,15 @@ def get_nth_data_sample(n: int) -> TrainingSample:
             cipher_text=cipher_text
         )
 
-def standard_deviation(data: str | Iterable[int]) -> int | float:
-    if isinstance(data, str):
-        data_as_byte_list = [i for i in data.encode('utf-8')]
-    elif type(data) is list[int]:
-        data_as_byte_list = list(data)
-    else:
-        data_as_byte_list = [i for i in data]
-    avg = sum(i for i in data_as_byte_list)/len(data_as_byte_list)
-    return sqrt(sum((i-avg)**2 for i in data_as_byte_list)/len(data_as_byte_list))
-    
+
+def find_key_size(ciphertext: bytes, test_range: range) -> int:
+    test_results: list[tuple[int, int|float]] = []
+    for size_tested in test_range:
+        cipher_sample = bytes_multiple_of(size_tested, ciphertext)
+        deviation = std(list(byte_distribuition(cipher_sample).values()))
+        test_results.append((size_tested, deviation))
+    return max(test_results, key=lambda a: a[1])[0]
+            
 
 def main():
     # exemplificação do uso básico da cifra
@@ -92,29 +90,30 @@ def main():
     plt.tight_layout()
 
     plain_text = sample.plaintext.encode('utf-8')
-    plain_text_deviation = std(list(letter_distribuition(plain_text).values()))
+    plain_text_deviation = std(list(byte_distribuition(plain_text).values()))
     make_letter_distribuition_panel(plain_text, axes[0, 0], title=f"plaintext sd={plain_text_deviation:.4}")
 
     cipher_text = sample.cipher_text
-    cipher_text_deviation = std(list(letter_distribuition(cipher_text).values()))
+    cipher_text_deviation = std(list(byte_distribuition(cipher_text).values()))
     make_letter_distribuition_panel(cipher_text, axes[1, 0], title=f"ciphertext sd={cipher_text_deviation:.4}")
 
     right_multiplicity_plaintext = bytes(list(map(lambda x: x ^ J_UTF8_VALUE, bytes_multiple_of(7, sample.cipher_text))))
-    right_multiplicity_plaintext_deviation =std(list(letter_distribuition(right_multiplicity_plaintext).values()))
+    right_multiplicity_plaintext_deviation =std(list(byte_distribuition(right_multiplicity_plaintext).values()))
     make_letter_distribuition_panel(right_multiplicity_plaintext, axes[0, 1], f"multiplicidade certa (plaintext) sd={right_multiplicity_plaintext_deviation:.4}")
 
     right_multiplicity_ciphertext = bytes_multiple_of(7, sample.cipher_text)
-    right_multiplicity_ciphertext_deviation = std(list(letter_distribuition(right_multiplicity_ciphertext).values()))
+    right_multiplicity_ciphertext_deviation = std(list(byte_distribuition(right_multiplicity_ciphertext).values()))
     make_letter_distribuition_panel(right_multiplicity_ciphertext, axes[1, 1], f"multiplicidade certa (ciphertext) sd={right_multiplicity_ciphertext_deviation:.4}")
 
     wrong_multiplicity_plain_text = bytes_multiple_of(3, sample.plaintext.encode('utf-8'))
-    wrong_multiplicity_plain_text_deviation = std(list(letter_distribuition(wrong_multiplicity_plain_text).values()))
+    wrong_multiplicity_plain_text_deviation = std(list(byte_distribuition(wrong_multiplicity_plain_text).values()))
     make_letter_distribuition_panel(wrong_multiplicity_plain_text, axes[0, 2], title=f"multiplicidade errada (plaintext) sd={wrong_multiplicity_plain_text_deviation:.4}")
 
     wrong_multiplicity_ciphertext = bytes_multiple_of(3, sample.cipher_text)
-    wrong_multiplicity_ciphertext_deviation = std(list(letter_distribuition(wrong_multiplicity_ciphertext).values()))
+    wrong_multiplicity_ciphertext_deviation = std(list(byte_distribuition(wrong_multiplicity_ciphertext).values()))
     make_letter_distribuition_panel(wrong_multiplicity_ciphertext, axes[1, 2], f"mutiplicidade errada (ciphertext) sd={wrong_multiplicity_ciphertext_deviation:.4}")
 
+    print(find_key_size(cipher_text, range(1, 9))) # função que acha o tamanho da chave
 
     plt.show()
 
