@@ -34,7 +34,6 @@ def letter_distribuition(text: bytes | str) -> dict[int, int]:
     frequency_dict: dict = {}
     for byte in text_data:
         frequency_dict[byte] = frequency_dict.get(byte, 0) + 1
-    print(frequency_dict)
     return frequency_dict
 
 
