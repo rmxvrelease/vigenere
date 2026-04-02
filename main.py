@@ -1,8 +1,11 @@
+from math import sqrt
 from matplotlib.axes import Axes
-from typing import Optional
+from typing import Optional, Iterable
 import json
 from pathlib import Path
 import matplotlib.pyplot as plt
+from numpy import std
+J_UTF8_VALUE = 106
 
 class TrainingSample:
     def __init__(self, plaintext: str, comment: Optional[str], language: str, cipher_key: str, cipher_text: bytes):
@@ -31,6 +34,7 @@ def letter_distribuition(text: bytes | str) -> dict[int, int]:
     frequency_dict: dict = {}
     for byte in text_data:
         frequency_dict[byte] = frequency_dict.get(byte, 0) + 1
+    print(frequency_dict)
     return frequency_dict
 
 
@@ -60,6 +64,17 @@ def get_nth_data_sample(n: int) -> TrainingSample:
             cipher_text=cipher_text
         )
 
+def standard_deviation(data: str | Iterable[int]) -> int | float:
+    if isinstance(data, str):
+        data_as_byte_list = [i for i in data.encode('utf-8')]
+    elif type(data) is list[int]:
+        data_as_byte_list = list(data)
+    else:
+        data_as_byte_list = [i for i in data]
+    avg = sum(i for i in data_as_byte_list)/len(data_as_byte_list)
+    return sqrt(sum((i-avg)**2 for i in data_as_byte_list)/len(data_as_byte_list))
+    
+
 def main():
     # exemplificação do uso básico da cifra
     plain_text="Cifra legal e legível"
@@ -74,11 +89,34 @@ def main():
     )
     
     sample = get_nth_data_sample(0)
-    axes: Axes = plt.subplots(2, 2)[1]
-    make_letter_distribuition_panel(sample.plaintext.encode('utf-8'), axes[0, 0], "plaintext")
-    make_letter_distribuition_panel(bytes(list(map(lambda x: x ^ 106, bytes_multiple_of(7, sample.cipher_text)))), axes[1, 0], "posições com multiplicidade correta (plaintext)")
-    make_letter_distribuition_panel(bytes_multiple_of(3, sample.cipher_text), axes[0, 1], "posições com multiplicidade errada (ciphertext)")
-    make_letter_distribuition_panel(bytes_multiple_of(7, sample.cipher_text), axes[1, 1], "posições com multiplicidade correta (ciphertext)")
+    axes: Axes = plt.subplots(2, 3)[1]
+    plt.tight_layout()
+
+    plain_text = sample.plaintext.encode('utf-8')
+    plain_text_deviation = std(list(letter_distribuition(plain_text).values()))
+    make_letter_distribuition_panel(plain_text, axes[0, 0], title=f"plaintext sd={plain_text_deviation:.4}")
+
+    cipher_text = sample.cipher_text
+    cipher_text_deviation = std(list(letter_distribuition(cipher_text).values()))
+    make_letter_distribuition_panel(cipher_text, axes[1, 0], title=f"ciphertext sd={cipher_text_deviation:.4}")
+
+    right_multiplicity_plaintext = bytes(list(map(lambda x: x ^ J_UTF8_VALUE, bytes_multiple_of(7, sample.cipher_text))))
+    right_multiplicity_plaintext_deviation =std(list(letter_distribuition(right_multiplicity_plaintext).values()))
+    make_letter_distribuition_panel(right_multiplicity_plaintext, axes[0, 1], f"multiplicidade certa (plaintext) sd={right_multiplicity_plaintext_deviation:.4}")
+
+    right_multiplicity_ciphertext = bytes_multiple_of(7, sample.cipher_text)
+    right_multiplicity_ciphertext_deviation = std(list(letter_distribuition(right_multiplicity_ciphertext).values()))
+    make_letter_distribuition_panel(right_multiplicity_ciphertext, axes[1, 1], f"multiplicidade certa (ciphertext) sd={right_multiplicity_ciphertext_deviation:.4}")
+
+    wrong_multiplicity_plain_text = bytes_multiple_of(3, sample.plaintext.encode('utf-8'))
+    wrong_multiplicity_plain_text_deviation = std(list(letter_distribuition(wrong_multiplicity_plain_text).values()))
+    make_letter_distribuition_panel(wrong_multiplicity_plain_text, axes[0, 2], title=f"multiplicidade errada (plaintext) sd={wrong_multiplicity_plain_text_deviation:.4}")
+
+    wrong_multiplicity_ciphertext = bytes_multiple_of(3, sample.cipher_text)
+    wrong_multiplicity_ciphertext_deviation = std(list(letter_distribuition(wrong_multiplicity_ciphertext).values()))
+    make_letter_distribuition_panel(wrong_multiplicity_ciphertext, axes[1, 2], f"mutiplicidade errada (ciphertext) sd={wrong_multiplicity_ciphertext_deviation:.4}")
+
+
     plt.show()
 
 
