@@ -31,10 +31,10 @@ def vigenere_cipher(
 
 def letter_distribuition(text: bytes | str) -> dict[int, int]:
     text_data = (text.encode("utf-8") if isinstance(text, str) else text)
-    frequency_dict: dict = {}
+    frequency_dict: dict = {i: 0 for i in range(256)}
     for byte in text_data:
         frequency_dict[byte] = frequency_dict.get(byte, 0) + 1
-    return frequency_dict
+    return {k: v/len(text_data) for (k,v) in frequency_dict.items()}
 
 
 def make_letter_distribuition_panel(text: bytes, ax: Axes, title: Optional[str]=None):
