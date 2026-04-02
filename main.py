@@ -69,8 +69,37 @@ def find_key_size(ciphertext: bytes, test_range: range) -> int:
         cipher_sample = bytes_multiple_of(size_tested, ciphertext)
         deviation = std(list(byte_distribuition(cipher_sample).values()))
         test_results.append((size_tested, deviation))
-    return max(test_results, key=lambda a: a[1])[0]
-            
+    return max(test_results, key=lambda a: a[1])[0]   
+
+
+def break_vigenere(ciphertext: bytes, key_range: range) -> tuple[str, str]:
+    key_size = find_key_size(ciphertext, key_range)    
+    recovered_key_bytes = []
+    for i in range(key_size):
+        slice_bytes = bytes_multiple_of(key_size, ciphertext[i:])
+        best_byte = 0
+        max_score = -1
+        for candidate_byte in range(256):
+            decrypted_slice = bytes([b ^ candidate_byte for b in slice_bytes])
+            current_score = 0
+            for b in decrypted_slice:
+                if b == 32:
+                    current_score += 5
+                elif 97 <= b <= 122:
+                    current_score += 2
+                elif 65 <= b <= 90:
+                    current_score += 1
+                elif 48 <= b <= 57:
+                    current_score += 1
+                elif b > 127:
+                    current_score -= 10
+            if current_score > max_score:
+                max_score = current_score
+                best_byte = candidate_byte        
+        recovered_key_bytes.append(best_byte)
+    key = bytes(recovered_key_bytes).decode('utf-8', errors='replace')
+    decrypted_bytes = vigenere_cipher(ciphertext, key)    
+    return key, decrypted_bytes.decode('utf-8', errors='replace')
 
 def main():
     # exemplificação do uso básico da cifra
@@ -114,6 +143,7 @@ def main():
     make_letter_distribuition_panel(wrong_multiplicity_ciphertext, axes[1, 2], f"mutiplicidade errada (ciphertext) sd={wrong_multiplicity_ciphertext_deviation:.4}")
 
     print(find_key_size(cipher_text, range(1, 9))) # função que acha o tamanho da chave
+    print(break_vigenere(cipher_text, range(1, 9)))
 
     plt.show()
 
