@@ -40,6 +40,11 @@ def make_letter_distribuition_panel(text: bytes, ax: Axes, title: Optional[str]=
         ax.set_title(title)
 
 
+def bytes_multiple_of(n: int, text: bytes) -> bytes:
+    return bytes([b for i, b in enumerate(text) if i%n==0])
+
+
+
 def get_nth_data_sample(n: int) -> TrainingSample:
     data_path = Path(__file__).parent / 'training_data.json'
     with open(data_path, 'rb') as f:
@@ -64,12 +69,16 @@ def main():
     print(f"cipher text: {vigenere_cipher(plain_text, cipher)}")
 
     # exemplificação da reversibilidade da cifra
-    print(vigenere_cipher(vigenere_cipher("Cifrar duas vezes equivale a não fazer nada", 'ab'), 'ab').decode('utf-8'))
+    print(
+        vigenere_cipher(vigenere_cipher("Cifrar duas vezes equivale a não fazer nada", 'ab'), 'ab').decode('utf-8')
+    )
     
     sample = get_nth_data_sample(0)
-    axes: Axes = plt.subplots(2, 1)[1]
-    make_letter_distribuition_panel(sample.plaintext.encode('utf-8'), axes[0], "plaintext")
-    make_letter_distribuition_panel(sample.cipher_text, axes[1], "ciphertext")
+    axes: Axes = plt.subplots(2, 2)[1]
+    make_letter_distribuition_panel(sample.plaintext.encode('utf-8'), axes[0, 0], "plaintext")
+    make_letter_distribuition_panel(bytes(list(map(lambda x: x ^ 106, bytes_multiple_of(7, sample.cipher_text)))), axes[1, 0], "posições com multiplicidade correta (plaintext)")
+    make_letter_distribuition_panel(bytes_multiple_of(3, sample.cipher_text), axes[0, 1], "posições com multiplicidade errada (ciphertext)")
+    make_letter_distribuition_panel(bytes_multiple_of(7, sample.cipher_text), axes[1, 1], "posições com multiplicidade correta (ciphertext)")
     plt.show()
 
 
